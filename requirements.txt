@@ -1,0 +1,9 @@
+anthropic
+feedparser
+httpx
+beautifulsoup4
+lxml
+pydantic
+python-dotenv
+tenacity
+rich
