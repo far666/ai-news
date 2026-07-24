@@ -4,6 +4,7 @@
 """
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from models import Article
 
@@ -26,11 +27,15 @@ class BaseFetcher(ABC):
         self.url = url
 
     @abstractmethod
-    def fetch(self) -> list[Article]:
-        """抓取該來源的文章。
+    def fetch(self, start: datetime, end: datetime) -> list[Article]:
+        """抓取該來源在 [start, end] 區間內的文章。
 
         實作時務必在回傳前呼叫 utils/cleaner.py 清洗 content，
         確保回傳的 Article.content 是不含 HTML tag 的乾淨純文字。
+
+        Args:
+            start: 篩選區間的起始時間（含）。
+            end: 篩選區間的結束時間（含）。
 
         Returns:
             清洗過後的 Article 清單。

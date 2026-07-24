@@ -3,6 +3,7 @@
 對應 sources.yaml 中 type: rss 的來源，使用 feedparser 解析 RSS feed。
 """
 
+import logging
 from datetime import datetime, timezone
 
 import feedparser
@@ -11,12 +12,20 @@ from fetchers.base import BaseFetcher
 from models import Article
 from utils.cleaner import clean_html
 
+logger = logging.getLogger(__name__)
+
 
 class RSSFetcher(BaseFetcher):
     """從 RSS feed 抓取文章。"""
 
-    def fetch(self) -> list[Article]:
-        """解析 self.url 的 RSS feed 並回傳文章清單。
+    def fetch(self, start: datetime, end: datetime) -> list[Article]:
+        """解析 self.url 的 RSS feed，回傳發布時間介於 [start, end] 之間的文章清單。
+
+        缺少必要欄位（例如發布時間）的 entry 會記錄警告並跳過，不中斷整體流程。
+
+        Args:
+            start: 篩選區間的起始時間（含）。
+            end: 篩選區間的結束時間（含）。
 
         Returns:
             清洗過後的 Article 清單。
@@ -31,13 +40,23 @@ class RSSFetcher(BaseFetcher):
 
         articles = []
         for entry in feed.entries:
+            published_at = self._parse_published_at(entry)
+            if published_at is None:
+                logger.warning(
+                    "[%s] 缺少發布時間，跳過該篇：%s", self.name, entry.get("link", "<no link>")
+                )
+                continue
+
+            if not (start <= published_at <= end):
+                continue
+
             raw_content = self._extract_raw_content(entry)
             articles.append(
                 Article(
                     title=entry.get("title", ""),
                     url=entry.get("link", ""),
                     content=clean_html(raw_content),
-                    published_at=self._parse_published_at(entry),
+                    published_at=published_at,
                     source=self.name,
                 )
             )
@@ -59,16 +78,16 @@ class RSSFetcher(BaseFetcher):
         return entry.get("summary", "")
 
     @staticmethod
-    def _parse_published_at(entry: feedparser.FeedParserDict) -> datetime:
-        """從 entry 取出發布時間，找不到時 fallback 為目前時間（UTC）。
+    def _parse_published_at(entry: feedparser.FeedParserDict) -> datetime | None:
+        """從 entry 取出發布時間。
 
         Args:
             entry: feedparser 解析出的單筆 entry。
 
         Returns:
-            文章發布時間（UTC）。
+            文章發布時間（UTC），找不到時回傳 None。
         """
         time_struct = entry.get("published_parsed") or entry.get("updated_parsed")
         if time_struct is None:
-            return datetime.now(timezone.utc)
+            return None
         return datetime(*time_struct[:6], tzinfo=timezone.utc)

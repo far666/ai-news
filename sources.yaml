@@ -11,4 +11,10 @@
 sources:
   - name: openai_blog
     type: rss
-    url: https://openai.com/blog/rss.xml
+    url: https://openai.com/news/rss.xml
+  - name: anthropic_news
+    type: html_scrape
+    url: https://www.anthropic.com/news
+  - name: google_ai_blog
+    type: rss
+    url: https://blog.google/innovation-and-ai/technology/ai/rss/

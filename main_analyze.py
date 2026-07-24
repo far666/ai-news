@@ -1,12 +1,23 @@
 """每週執行進入點。
 
-明確計算「週一到週日」的固定日期範圍（不使用「最近 7 個資料夾」這種
-相對邏輯，避免漏跑某天時範圍跑掉），讀取對應資料夾內容，
+計算「今天往前推 7 天」到「今天」的日期範圍，讀取對應資料夾內容，
 彙整後呼叫 Claude API 做摘要分析，最後透過輸出層輸出結果。
 """
 
 import logging
-from datetime import date
+from datetime import date, timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+import analyzer
+from output.console_output import ConsoleOutput
+
+load_dotenv()
+
+LOGS_DIR = "logs"
+
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(day: date) -> None:
@@ -15,19 +26,31 @@ def setup_logging(day: date) -> None:
     Args:
         day: 執行日期，決定 log 檔名。
     """
-    raise NotImplementedError
+    Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
+    log_file = Path(LOGS_DIR) / f"{day.isoformat()}.log"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8"),
+            logging.StreamHandler(),
+        ],
+    )
 
 
-def get_week_range(today: date) -> tuple[date, date]:
-    """計算 today 所在週的週一與週日日期。
+def get_date_range(today: date, days: int = 7) -> tuple[date, date]:
+    """計算「today 往前推 days 天」到 today 的日期範圍。
 
     Args:
-        today: 基準日期。
+        today: 執行當下的日期。
+        days: 要往前推的天數，預設 7。
 
     Returns:
-        (週一日期, 週日日期) 的 tuple。
+        (開始日期, 結束日期) 的 tuple。
     """
-    raise NotImplementedError
+    start = today - timedelta(days=days)
+    return start, today
 
 
 def run() -> None:
@@ -35,13 +58,26 @@ def run() -> None:
 
     流程：
         1. setup_logging()。
-        2. get_week_range() 算出本週週一到週日的日期範圍。
+        2. get_date_range() 算出往前推 7 天到今天的日期範圍。
         3. 呼叫 analyzer.collect_week_articles() 讀取該範圍內所有文章。
         4. 呼叫 analyzer.analyze() 呼叫 Claude API 做摘要分析。
-        5. 透過 output 層（例如 ConsoleOutput）輸出摘要結果。
+        5. 透過 output 層（例如 ConsoleOutput / LineOutput）輸出摘要結果。
     """
-    raise NotImplementedError
+    today = date.today()
+    setup_logging(today)
 
+    start, end = get_date_range(today)
+    logger.info("開始分析週報：%s ~ %s", start.isoformat(), end.isoformat())
+
+    articles = analyzer.collect_week_articles(start, end)
+    logger.info("共收集到 %d 篇文章", len(articles))
+
+    if len(articles) == 0:
+        logger.info("沒有文章可以分析")
+    else:
+        summary = analyzer.analyze(articles)
+        ConsoleOutput().send(summary, start, end)
+        logger.info("週報分析完成，已寫入檔案")
 
 if __name__ == "__main__":
     run()

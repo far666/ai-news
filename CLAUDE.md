@@ -80,4 +80,4 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 # 儲存規則
 - 依日期分資料夾：data/YYYY-MM-DD/
-- 週分析讀取「週一到週日」的固定日期範圍，不用相對邏輯
+- 週分析讀取「今天往前推 7 天」到「今天」的日期範圍

@@ -4,9 +4,13 @@
 每個來源存成一個檔案。
 """
 
+import json
 from datetime import date
+from pathlib import Path
 
 from models import Article
+
+DATA_DIR = Path("data")
 
 
 def save_articles(articles: list[Article], source_name: str, day: date) -> None:
@@ -19,7 +23,12 @@ def save_articles(articles: list[Article], source_name: str, day: date) -> None:
         source_name: 來源名稱，對應 sources.yaml 的 name 欄位。
         day: 抓取日期，決定存進哪個 data/YYYY-MM-DD/ 資料夾。
     """
-    raise NotImplementedError
+    day_dir = DATA_DIR / day.isoformat()
+    day_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = day_dir / f"{source_name}.json"
+    payload = [json.loads(article.model_dump_json()) for article in articles]
+    file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_articles(source_name: str, day: date) -> list[Article]:
@@ -34,7 +43,12 @@ def load_articles(source_name: str, day: date) -> list[Article]:
     Returns:
         該來源當天存檔的 Article 清單，若檔案不存在則回傳空清單。
     """
-    raise NotImplementedError
+    file_path = DATA_DIR / day.isoformat() / f"{source_name}.json"
+    if not file_path.exists():
+        return []
+
+    payload = json.loads(file_path.read_text(encoding="utf-8"))
+    return [Article.model_validate(item) for item in payload]
 
 
 def load_all_articles_for_day(day: date) -> list[Article]:
@@ -46,4 +60,12 @@ def load_all_articles_for_day(day: date) -> list[Article]:
     Returns:
         當天所有來源的 Article 清單。
     """
-    raise NotImplementedError
+    day_dir = DATA_DIR / day.isoformat()
+    if not day_dir.exists():
+        return []
+
+    articles = []
+    for file_path in sorted(day_dir.glob("*.json")):
+        payload = json.loads(file_path.read_text(encoding="utf-8"))
+        articles.extend(Article.model_validate(item) for item in payload)
+    return articles
