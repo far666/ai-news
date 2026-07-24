@@ -1,6 +1,10 @@
 .env
 __pycache__/
 *.pyc
+*.log
+.claude/
+.pytest_cache/
+.venv/
 logs/*
 weekly_reports/
 data/*
