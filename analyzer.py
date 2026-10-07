@@ -1,6 +1,6 @@
 """週摘要分析。
 
-讀取一週（週一到週日）份的 data/YYYY-MM-DD/ 資料夾內容，
+讀取「今天往前推 7 天」到「今天」的 data/YYYY-MM-DD/ 資料夾內容，
 組成 prompt 呼叫 Claude API 做摘要分析。
 """
 
@@ -12,7 +12,7 @@ from models import Article
 from storage.daily_store import load_all_articles_for_day
 
 # 預設 model，之後要換就改這裡（或呼叫 analyze() 時傳 model 參數覆蓋）。
-DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
 # 基本 prompt 模板，之後要調整分析角度、輸出格式就改這裡
 # （或呼叫 build_prompt() 時傳 prompt_template 參數覆蓋）。
@@ -75,9 +75,12 @@ def analyze(articles: list[Article], model: str = DEFAULT_MODEL) -> str:
     prompt = build_prompt(articles)
 
     client = anthropic.Anthropic()
-    message = client.messages.create(
+    # fallbacks="default"：若被安全分類器拒答，API 會自動改用其他 model 重跑。
+    message = client.beta.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=16000,
+        betas=["server-side-fallback-2026-07-01"],
+        fallbacks="default",
         messages=[{"role": "user", "content": prompt}],
     )
     for block in message.content:

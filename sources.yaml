@@ -1,12 +1,12 @@
 # 新聞來源設定檔
 #
 # 新增來源時，如果 type 已有對應的 fetcher 實作，只需要在這裡加一筆設定，
-# 不需要新增程式碼。目前支援的 type: rss
+# 不需要新增程式碼。目前支援的 type: rss, html_scrape
 #
 # 欄位說明：
 #   name: 來源代稱，會用在儲存檔名與 log 中
-#   type: 來源類型，對應 fetchers/ 底下的實作（例如 rss -> RSSFetcher）
-#   url:  來源網址（RSS feed 網址）
+#   type: 來源類型，對應 fetchers/ 底下的實作（rss -> RSSFetcher，html_scrape -> HTMLScrapeFetcher）
+#   url:  來源網址（RSS feed 網址，或 html_scrape 的新聞列表頁）
 
 sources:
   - name: openai_blog
